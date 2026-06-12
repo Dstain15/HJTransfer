@@ -1,0 +1,61 @@
+# Deploy HJTransfer to Azure App Service
+#
+# Prerequisites – set these as GitHub repository secrets:
+#   AZURE_WEBAPP_PUBLISH_PROFILE  – download from Azure Portal > your Web App > Get Publish Profile
+#   VITE_BASE44_APP_ID            – your Base44 app ID
+#   VITE_BASE44_APP_BASE_URL      – your Base44 backend URL (e.g. https://yourapp.base44.app)
+#
+# Set AZURE_WEBAPP_NAME below to your Azure Web App name.
+
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  # Set AZURE_WEBAPP_NAME as a GitHub repository secret (see README for instructions).
+  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.AZURE_WEBAPP_NAME }}" ]; then
+            echo "::error::AZURE_WEBAPP_NAME secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" ]; then
+            echo "::error::AZURE_WEBAPP_PUBLISH_PROFILE secret is not set. Download it from the Azure Portal."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Vite app
+        run: npm run build
+        env:
+          VITE_BASE44_APP_ID: ${{ secrets.VITE_BASE44_APP_ID }}
+          VITE_BASE44_APP_BASE_URL: ${{ secrets.VITE_BASE44_APP_BASE_URL }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: dist

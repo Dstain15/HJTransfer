@@ -37,3 +37,33 @@ Open [Base44.com](http://Base44.com) and click on Publish.
 Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
 
 Support: [https://app.base44.com/support](https://app.base44.com/support)
+
+---
+
+## Deploying to Azure App Service
+
+### 1. Create an Azure Web App
+
+- Runtime: **Node 20 LTS**, OS: **Linux**
+- In **Configuration → Application settings**, add:
+  - `SCM_DO_BUILD_DURING_DEPLOYMENT` = `true`
+- Set the **Startup Command** to:
+  ```
+  pm2 serve /home/site/wwwroot --no-daemon --spa
+  ```
+  The `--spa` flag makes pm2 serve all unmatched routes from `index.html`, which is required for client-side routing. The `public/web.config` file in this repo is only needed if you choose a **Windows** App Service plan (IIS); it is ignored on Linux.
+
+### 2. Add GitHub repository secrets
+
+Go to **Settings → Secrets and variables → Actions** in this GitHub repo and add:
+
+| Secret name | Value |
+|---|---|
+| `AZURE_WEBAPP_NAME` | The name of your Azure Web App (e.g. `hjtransfer`) |
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | Download from Azure Portal → your Web App → **Get Publish Profile** |
+| `VITE_BASE44_APP_ID` | Your Base44 app ID |
+| `VITE_BASE44_APP_BASE_URL` | Your Base44 backend URL (e.g. `https://yourapp.base44.app`) |
+
+### 3. Deploy
+
+Push to `main` (or trigger **Run workflow** manually from the **Actions** tab). The workflow will build the Vite app and deploy the `dist/` folder to Azure.
